@@ -1,0 +1,12 @@
+money = 500
+days = 0
+week = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+today = 0
+SA = 0  # speaking Ability
+CP = 0  # creativity power
+energy = 40  # 體力
+ME = 40  # Max energy
+catch = 0  # 被捕率
+KPI = 5000
+state = 'start'
+room_flag = True  # 進入第一時間不會誤觸
