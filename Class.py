@@ -4,7 +4,7 @@ import sys
 import variable
 
 FPS = 60  # 設定每秒幾幀
-fpsClock = pygame.time.Clock()  # Clock
+fpsClock = pygame.time.Clock()  # Clock縮寫
 FULLSCREEN = (800, 600)  # 視窗大小tuple
 SCREEN_CENTER = (400, 300)  # 視窗中心tuple
 SCREEN = pygame.display.set_mode(FULLSCREEN)  # 偷懶用簡寫
@@ -87,7 +87,7 @@ transition = TRANSITION(SCREEN, None)  # 把transition宣告為這個class
 
 
 class CreateText:
-    def __init__(self, screen, text, fontcolor, backcolor, x_y, size, n):  # n為一行的字數
+    def __init__(self, screen, text, fontcolor, backcolor, text_pos, size, n):  # n為一行的字數
         self.screen = screen
         self.size = size
         self.font = pygame.font.Font("fonts/NaikaiFont-Light.ttf", self.size)  # 設定字體和大小
@@ -95,7 +95,7 @@ class CreateText:
         self.text_alpha = 255
         self.fontCOLOR = fontcolor
         self.backCOLOR = backcolor
-        self.x_y = x_y
+        self.x_y = text_pos
         self.n = n
         self.sentence = None  # 反正就先宣告出來，之後會用到
         self.rect = None
@@ -106,6 +106,7 @@ class CreateText:
         if len(self.text) > self.n:  # 如果文字的長度大於一行的字數的話
             x = len(self.text) // self.n + 1  # 看文字是幾行，取整數
             for i in range(x):
+                self.sentences[i].set_alpha(self.text_alpha)
                 self.screen.blit(self.sentences[i], self.rects[i])  # 一行一行重複貼到螢幕上
         else:
             self.sentence.set_alpha(self.text_alpha)
@@ -255,10 +256,13 @@ class ANIME:
         animeText.text_alpha = self.text_alpha
 
         # 設定對話框圖像
-        self.text_box = pygame.image.load("images/game/對話框.png").convert_alpha()
+        self.text_box = pygame.image.load("images/game/square.png").convert_alpha()
         self.text_box = pygame.transform.scale(self.text_box, (800, 180))
         self.text_box.set_alpha(200)
         self.text_box_rect = self.text_box.get_rect(center=(400, 520))
+
+        self.click_flag = False
+        self.skip_flag = False
 
     # 做一個把圖片和字貼到螢幕上的function
     def show(self):
@@ -284,15 +288,17 @@ class ANIME:
             animeText.new_sentence()
             self.image = pygame.image.load(image)
             self.image = pygame.transform.scale(self.image, FULLSCREEN)
-            FUNCS.delay(3000)
+            self.click_flag = False
+            self.check()
         self.image = pygame.image.load('images/anime/train1_1.jpg').convert_alpha()
         self.image = pygame.transform.scale(self.image, FULLSCREEN)
         self.show()
         animeText.text = self.opening_text[14]
         animeText.new_sentence()
-        FUNCS.delay(3000)
+        self.click_flag = False
+        self.check()
         # 下面這段是循環播放訓練
-        for i in range(3):
+        for i in range(2):
             FUNCS.quit_game()
             image = ('images/anime/train1_1.jpg',
                      'images/anime/train1_2.jpg',
@@ -302,15 +308,33 @@ class ANIME:
                 self.image = pygame.image.load(image[j]).convert_alpha()
                 self.image = pygame.transform.scale(self.image, FULLSCREEN)
                 self.show()
-                FUNCS.delay(500)
+                self.click_flag = False
+                self.check()
         # 下面這段是把最後一張圖片和字放上去
         self.image = pygame.image.load('images/anime/opening/14.jpg')
         self.image = pygame.transform.scale(self.image, FULLSCREEN)
         animeText.text = self.opening_text[15]
         animeText.new_sentence()
         self.show()
-        FUNCS.delay(3000)
+        self.click_flag = False
+        self.check()
+        self.skip_flag = False
+        self.click_flag = False
 
+    # 點擊時切換到下一張
+    def check(self):
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    self.click_flag = True
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+                    self.skip_flag = True
+
+            if self.click_flag or self.skip_flag:
+                break
     # 開始畫面
     def start_screen(self):
         self.screen.blit(self.image, self.rect)
@@ -511,7 +535,7 @@ class QTE:  # 健身小遊戲
     def __init__(self, screen):  # 把該load的圖都整理好
         self.screen = screen
 
-        self.text_box = pygame.image.load("images/game/對話框.png").convert_alpha()
+        self.text_box = pygame.image.load("images/game/square.png").convert_alpha()
         self.text_box = pygame.transform.scale(self.text_box, (800, 180))
         self.text_box.set_alpha(200)
         self.text_box_rect = self.text_box.get_rect(center=(400, 520))
@@ -567,6 +591,19 @@ class QTE:  # 健身小遊戲
         self.keys = ('W', 'A', 'S', 'D')
         self.now_key = random.choice(self.keys)
 
+        # 設定音效檔案路徑
+        sound_paths = {
+            "sound1": "music/train_1.mp3",
+            "sound2": "music/train_2.mp3",
+            "sound3": "music/train_3.mp3",
+            "sound4": "music/train_4.mp3"
+        }
+
+        # 讀入音效
+        self.Sound_effects = {}
+        for key, path in sound_paths.items():
+            self.Sound_effects[key] = pygame.mixer.Sound(path)
+
     def start_game(self):  # 把該準備的都準備好
         self.circle_centerX = random.randrange(200, 600)
         self.circle_centerY = random.randrange(200, 400)
@@ -586,6 +623,7 @@ class QTE:  # 健身小遊戲
             self.button = self.buttonS
         elif self.now_key == 'D':
             self.button = self.buttonD
+        pygame.mixer.music.stop()
 
     def change_position(self):  # 位置與按鍵都在隨機一次然後加速
         self.now_key = random.choice(self.keys)
@@ -601,7 +639,7 @@ class QTE:  # 健身小遊戲
         self.circle_centerY = random.randrange(200, 400)
         self.button_rect.center = (self.circle_centerX, self.circle_centerY)
         self.speed += 0.08
-        FUNCS.delay(100)
+        FUNCS.delay(50)
 
     def change_background(self):  # 判定然後改flag，讓他循環
         if self.background_flag < 3:
@@ -620,6 +658,7 @@ class QTE:  # 健身小遊戲
             # 如果現在該按W而且按到W了，就變換位置變換背景然後加一分
             if key[pygame.K_w]:
                 if self.now_key == 'W':
+                    FUNCS.delay(80)
                     self.R = 200
                     self.change_position()
                     self.score += 1
@@ -631,6 +670,7 @@ class QTE:  # 健身小遊戲
             # 如果現在該按S而且按到S了，就變換位置變換背景然後加一分
             elif key[pygame.K_s]:
                 if self.now_key == 'S':
+                    FUNCS.delay(80)
                     self.R = 200
                     self.change_position()
                     self.score += 1
@@ -641,6 +681,7 @@ class QTE:  # 健身小遊戲
             # 如果現在該按A而且按到A了，就變換位置變換背景然後加一分
             elif key[pygame.K_a]:
                 if self.now_key == 'A':
+                    FUNCS.delay(80)
                     self.R = 200
                     self.change_position()
                     self.score += 1
@@ -651,6 +692,7 @@ class QTE:  # 健身小遊戲
             # 如果現在該按D而且按到D了，就變換位置變換背景然後加一分
             elif key[pygame.K_d]:
                 if self.now_key == 'D':
+                    FUNCS.delay(80)
                     self.R = 200
                     self.change_position()
                     self.score += 1
@@ -671,6 +713,15 @@ class QTE:  # 健身小遊戲
             elif key[pygame.K_d]:
                 self.end_game()
 
+        if 195 <= self.R <= 200:
+            self.Sound_effects['sound1'].play()
+        elif 160 <= self.R <= 165:
+            self.Sound_effects['sound2'].play()
+        elif 123 <= self.R <= 128:
+            self.Sound_effects['sound3'].play()
+        elif 85 <= self.R <= 90:
+            self.Sound_effects['sound4'].play()
+
     def running(self):
         self.R -= self.speed  # 讓圓的半徑依照速度變小
         # 依照flag改變背景
@@ -687,6 +738,9 @@ class QTE:  # 健身小遊戲
         pygame.draw.circle(self.screen, WHITE, (self.circle_centerX, self.circle_centerY), self.R, 10)
 
     def end_game(self):
+        for sound in self.Sound_effects.values():
+            sound.stop()
+        pygame.mixer.music.play(loops=-1)
         variable.ME += self.score // 2  # 根據分數增加體力上限
         # 根據分數在全黑的螢幕上寫不同的字
         self.screen.fill(BLACK)
@@ -1065,16 +1119,33 @@ class ROOM:
         self.screen = screen
 
         # 設定對話框圖像
-        self.text_box = pygame.image.load("images/game/對話框.png").convert_alpha()
-        self.text_box = pygame.transform.scale(self.text_box, (800, 180))
-        self.text_box.set_alpha(230)
-        self.text_box_rect = self.text_box.get_rect(center=(400, 520))
+        self.text_box = pygame.image.load("images/game/square.png").convert_alpha()  # 讀入圖像
+        self.text_box = pygame.transform.scale(self.text_box, (800, 180))  # 改變至適當大小
+        self.text_box.set_alpha(230)  # 設定透明度 並非所有圖像皆需要
+        self.text_box_rect = self.text_box.get_rect(center=(400, 520))  # 設定邊界與中心
 
         # 設定房間背景
         self.room = pygame.image.load("images/room/none.png").convert_alpha()
         self.room = pygame.transform.scale(self.room, FULLSCREEN)
         self.room_rect = self.room.get_rect()
 
+        # 設定說明圖像
+        self.information_Btn = pygame.image.load('images/room/informationBtn1.png')
+        self.information_Btn = pygame.transform.scale(self.information_Btn, (80, 80))
+        self.information_Btn_rect = self.information_Btn.get_rect(center=(760, 40))
+        self.work_info = pygame.image.load('images/room/game_information.png').convert()
+        self.work_info.set_colorkey(WHITE)
+        self.work_info = pygame.transform.scale(self.work_info, (576, 432))
+        self.work_info_rect = self.work_info.get_rect(center=SCREEN_CENTER)
+        self.casino_info = pygame.image.load('images/room/blackjack_information.png').convert()
+        self.casino_info.set_colorkey(WHITE)
+        self.casino_info = pygame.transform.scale(self.casino_info, (576, 432))
+        self.casino_info_rect = self.casino_info.get_rect(center=SCREEN_CENTER)
+        self.train_info = pygame.image.load('images/room/train_information.png').convert()
+        self.train_info.set_colorkey(WHITE)
+        self.train_info = pygame.transform.scale(self.train_info, (576, 432))
+        self.train_info_rect = self.train_info.get_rect(center=SCREEN_CENTER)
+        
         # 設定房間內物件圖像
         self.items = {
             'phone': pygame.image.load("images/room/phone.png").convert_alpha(),
@@ -1154,6 +1225,9 @@ class ROOM:
 
         # 初始化每日吃飯旗標
         self.eating_flag = False
+
+        # 初始化說明旗標
+        self.info_flag = True
 
         # 初始化書櫃的等級為 0
         self.book_LV = 0
@@ -1248,7 +1322,7 @@ class ROOM:
                     elif res == 'shop':
                         variable.energy -= 5
                         # 前往購物中心
-                        image = pygame.image.load('images/room/商場.png')
+                        image = pygame.image.load('images/room/shopping_mall.png')
                         transition.ready(image)
                         transition.hacker()  # 轉場
                         # 選擇在購物中心的事件
@@ -1308,6 +1382,8 @@ class ROOM:
                             FUNCS.update()
                             FUNCS.delay(2000)
                             self.back()
+                    else:
+                        self.back()
                 else:
                     self.back()
             # 點擊床是否睡覺回復體力並換日
@@ -1392,27 +1468,27 @@ class ROOM:
                     self.back()
 
     # 各項事件的確認
-    def check_event(self, event):
-        if event == 'phone':
+    def check_event(self, event_item):
+        if event_item == 'phone':
             if variable.energy < 15:
-                return self.no_energy()
+                return self.no_energy(event_item)
             else:
                 roomText.text = '要工作嗎(消耗15體力開啟事件)'
-        elif event == 'door':
+        elif event_item == 'door':
             if variable.energy < 5:
-                return self.no_energy()
+                return self.no_energy(event_item)
             else:
                 roomText.text = '要出門嗎(消耗5體力)'
-        elif event == 'bed':
+        elif event_item == 'bed':
             roomText.text = '要睡覺了嗎(回復體力)'
-        elif event == 'exercise':
+        elif event_item == 'exercise':
             if variable.energy < 20:
-                return self.no_energy()
+                return self.no_energy(event_item)
             else:
                 roomText.text = '要開始健身嗎(消耗20體力增加體力上限)'
-        elif event == 'book':
+        elif event_item == 'book':
             if variable.energy < 10:
-                return self.no_energy()
+                return self.no_energy(event_item)
             else:
                 roomText.text = '要讀書嗎(消耗10體力增加創造力與話術)'
         self.screen.blit(self.text_box, self.text_box_rect)
@@ -1420,20 +1496,20 @@ class ROOM:
         roomText.new_sentence()
         roomText.draw()
         FUNCS.update()
-        return self.yes_or_no()
+        return self.yes_or_no(event_item)
 
     # 體力不足時的提醒
-    def no_energy(self):
+    def no_energy(self, event_item):
         self.screen.blit(self.text_box, self.text_box_rect)
         roomText.text = '你累壞了 確定還要繼續嗎'
         roomText.x_y = (400, 500)
         roomText.new_sentence()
         roomText.draw()
         FUNCS.update()
-        return self.yes_or_no()
+        return self.yes_or_no(event_item)
 
     # 是否的判斷
-    def yes_or_no(self):
+    def yes_or_no(self, event_item):
         self.button_rect.center = (400, 200)
         self.screen.blit(self.button, self.button_rect)
         # 用來判斷點擊的邊界
@@ -1452,17 +1528,45 @@ class ROOM:
         roomText.x_y = (self.button_rect.centerx, self.button_rect.centery + 100)
         roomText.new_sentence()
         roomText.draw()
+        if event_item == 'phone' or event_item == 'exercise':
+            self.screen.blit(self.information_Btn, self.information_Btn_rect)
         FUNCS.update()
+        self.info_flag = True
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if self.button_rect.collidepoint(event.pos):
-                        return True
-                    elif temp_rect.collidepoint(event.pos):
-                        return False
+                    if self.info_flag:
+                        if self.button_rect.collidepoint(event.pos):
+                            return True
+                        elif temp_rect.collidepoint(event.pos):
+                            return False
+                if event.type == pygame.MOUSEMOTION:
+                    if self.information_Btn_rect.collidepoint(event.pos):
+                        if self.information_Btn_rect.collidepoint(event.pos):
+                            if event_item == 'phone':
+                                self.screen.blit(self.work_info, self.work_info_rect)
+                                FUNCS.update()
+                                self.info_flag = False
+                            elif event_item == 'exercise':
+                                self.screen.blit(self.train_info, self.train_info_rect)
+                                FUNCS.update()
+                                self.info_flag = False
+                        self.info_flag = False
+                    elif not self.info_flag:
+                        self.info_flag = True
+                        self.screen.blit(self.room, self.room_rect)
+                        self.screen.blit(self.items['phone'], self.rect['phone'])
+                        self.screen.blit(self.items['door_closed'], self.rect['door_closed'])
+                        self.screen.blit(self.items['bed'], self.rect['bed'])
+                        self.screen.blit(self.items['exercise'], self.rect['exercise'])
+                        self.screen.blit(self.items['book'], self.rect['book'])
+                        self.screen.blit(self.status_bar, self.status_bar_rect)
+                        val.update_val()
+                        val.draw()
+                        return self.check_event(event_item)
 
     # 回傳出門的地點
     def where(self):
@@ -1496,24 +1600,44 @@ class ROOM:
         roomText.x_y = (temp_rect2.centerx, temp_rect2.centery)
         roomText.new_sentence()
         roomText.draw()
+        self.screen.blit(self.information_Btn, self.information_Btn_rect)
         FUNCS.update()
+        self.info_flag = True
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if self.button_rect.collidepoint(event.pos):
-                        return 'casino'
-                    elif temp_rect1.collidepoint(event.pos):
-                        return 'shop'
-                    elif temp_rect2.collidepoint(event.pos):
-                        return 'back'
+                    if self.info_flag:
+                        if self.button_rect.collidepoint(event.pos):
+                            return 'casino'
+                        elif temp_rect1.collidepoint(event.pos):
+                            return 'shop'
+                        elif temp_rect2.collidepoint(event.pos):
+                            return 'back'
+                if event.type == pygame.MOUSEMOTION:
+                    if self.information_Btn_rect.collidepoint(event.pos):
+                        self.screen.blit(self.casino_info, self.casino_info_rect)
+                        FUNCS.update()
+                        self.info_flag = False
+                    elif not self.info_flag:
+                        self.info_flag = True
+                        self.screen.blit(self.room, self.room_rect)
+                        self.screen.blit(self.items['phone'], self.rect['phone'])
+                        self.screen.blit(self.items['door_closed'], self.rect['door_closed'])
+                        self.screen.blit(self.items['bed'], self.rect['bed'])
+                        self.screen.blit(self.items['exercise'], self.rect['exercise'])
+                        self.screen.blit(self.items['book'], self.rect['book'])
+                        self.screen.blit(self.status_bar, self.status_bar_rect)
+                        val.update_val()
+                        val.draw()
+                        return self.where()
 
     # 購物中心中的事件
     def shopping(self):
         # 渲染購物中心的背景、對話框、按鈕
-        background = pygame.image.load("images/room/商場.png")
+        background = pygame.image.load("images/room/shopping_mall.png")
         background = pygame.transform.scale(background, FULLSCREEN)
         background_rect = background.get_rect(center=SCREEN_CENTER)
         self.screen.blit(background, background_rect)
@@ -1622,7 +1746,7 @@ class MainGame:
         self.screen = screen
 
         # 對話框圖像的設定
-        self.text_box = pygame.image.load("images/game/對話框.png").convert_alpha()
+        self.text_box = pygame.image.load("images/game/square.png").convert_alpha()
         self.text_box = pygame.transform.scale(self.text_box, (800, 200))
         self.text_box.set_alpha(255)
         self.text_box_rect = self.text_box.get_rect(center=(400, 525))
@@ -1633,7 +1757,7 @@ class MainGame:
         self.phone_screen_rect = self.phone_screen.get_rect(center=SCREEN_CENTER)
 
         # 被點擊圖像(地鼠)的設定
-        self.idea = pygame.image.load("images/game/打地鼠.png").convert_alpha()
+        self.idea = pygame.image.load("images/game/mole.png").convert_alpha()
         self.idea = pygame.transform.scale(self.idea, (170, 170))
         self.idea_rect = self.idea.get_rect(center=(400, 300))
         self.idea_alpha = 0
@@ -1654,7 +1778,7 @@ class MainGame:
         self.time = 0  # 時間變數
 
         self.idea_disappear_speed = 256 + variable.CP * 10  # 地鼠消失速度
-        self.answer_appear_frequency = random.randint(1, min(4, 10 - variable.CP))  # 正確答案出現頻率
+        self.answer_appear_frequency = random.randint(1, max(4, 10 - variable.CP))  # 正確答案出現頻率
 
         self.trust_init_value = 4 + variable.SA  # 初始信賴度
         self.trust_decrease_value = 0  # 下降信賴度
@@ -1839,7 +1963,7 @@ class MainGame:
         # 設定數值上限
         if self.idea_disappear_speed > 300:
             self.idea_disappear_speed = 300
-        self.answer_appear_frequency = random.randint(1, min(4, 10 - variable.CP))
+        self.answer_appear_frequency = random.randint(1, max(4, 10 - variable.CP))
 
         self.trust_init_value = 4 + variable.SA
         self.trust_decrease_value = 0
@@ -1881,7 +2005,8 @@ class MainGame:
         if self.now_word == self.answer_word[self.now_question_num]:
             self.trust_decrease_value += 1
             if self.trust_decrease_value <= 4:
-                self.trust_value_image = pygame.image.load('images/game/trust_image/-' + str(self.trust_decrease_value) + '.png')
+                self.trust_value_image = \
+                    pygame.image.load('images/game/trust_image/-' + str(self.trust_decrease_value) + '.png')
                 self.trust_value_rect = self.trust_value_image.get_rect(center=(180, 15))
 
         # 確認正確答案在一定次數內會出現
@@ -1894,7 +2019,7 @@ class MainGame:
         else:
             self.now_word = self.answer_word[self.now_question_num]
             self.answer_frequency_flag = 0
-            self.answer_appear_frequency = random.randint(1, min(4, 10 - variable.CP))
+            self.answer_appear_frequency = random.randint(1, max(4, 10 - variable.CP))
         # 更換詞條
         gameText.text = self.now_word
         gameText.x_y = (idea_x, idea_y)
@@ -1922,20 +2047,17 @@ class MainGame:
                 workText.text = self.text[self.now_question_num]
                 workText.x_y = (400, 500)
                 workText.new_sentence()
-                workText.draw()
                 FUNCS.update()
                 FUNCS.delay(300)
 
-                # 使句子閃爍達到提醒與轉場的效果
-                for _ in range(3):
+                # 使句子逐漸浮現達到提醒與轉場的效果
+                for alpha in range(0, 256, 5):
                     self.game_UI_init()
                     self.screen.blit(self.text_box, self.text_box_rect)
-                    FUNCS.update()
-                    FUNCS.delay(300)
-                    self.game_UI_init()
+                    workText.text_alpha = alpha
                     workText.draw()
                     FUNCS.update()
-                    FUNCS.delay(300)
+                    FUNCS.delay(1)
 
                 self.game_init()
                 self.game_flag = True
@@ -1956,7 +2078,7 @@ class MainGame:
     def game_init(self):
         self.word_list = []
         self.get_word_list()
-        self.answer_appear_frequency = random.randint(1, min(4, 10 - variable.CP))
+        self.answer_appear_frequency = random.randint(1, max(4, 10 - variable.CP))
         self.change_idea_pos()
         self.time = 0
 
@@ -2004,7 +2126,7 @@ class MainGame:
 
     # 事件失敗
     def event_fail(self):
-        variable.catch += 10
+        variable.catch += 20
         image = pygame.image.load(room_path).convert_alpha()
         transition.ready(image)
         transition.hacker()
@@ -2049,7 +2171,7 @@ class MainGame:
             FUNCS.delay(2000)
             room.back()
         else:
-            variable.catch += self.trust_decrease_value
+            variable.catch += self.trust_decrease_value * 5
             image = pygame.image.load(room_path).convert_alpha()
             transition.ready(image)
             transition.hacker()
